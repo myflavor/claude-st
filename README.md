@@ -4,6 +4,24 @@ Claude CLI 配置管理工具。
 
 ## 安装
 
+### Linux / macOS
+
+```bash
+curl -sSL https://raw.githubusercontent.com/myflavor/claude-cli/main/scripts/install.sh | bash
+```
+
+### Windows (PowerShell)
+
+```powershell
+irm https://raw.githubusercontent.com/myflavor/claude-cli/main/scripts/install.ps1 | iex
+```
+
+安装脚本会：
+1. 从 GitHub Releases 下载最新版本的二进制
+2. 放到和 `claude` 同一个目录（自动放到 PATH 里）
+
+### 从源码编译
+
 ```bash
 go build -o claude-cli .
 ```
