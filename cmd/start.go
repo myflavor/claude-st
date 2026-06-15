@@ -43,16 +43,16 @@ func runStart(cmd *cobra.Command, args []string) {
 	// Parse our short flags, pass everything else to claude
 	for i := 0; i < len(args); i++ {
 		arg := args[i]
-		switch {
-		case arg == "-P":
+		switch arg {
+		case "-P":
 			if i+1 >= len(args) {
 				exitWithError("Flag -P requires a value")
 			}
 			provider = args[i+1]
 			i++
-		case arg == "-S":
+		case "-S":
 			skipPermissions = true
-		case arg == "-H", arg == "--help":
+		case "-H", "--help":
 			cmd.Help()
 			return
 		default:
@@ -82,11 +82,15 @@ func runStart(cmd *cobra.Command, args []string) {
 		finalArgs = append(finalArgs, "-dangerously-skip-permissions")
 	}
 
-	// Add remaining arguments
 	finalArgs = append(finalArgs, claudeArgs...)
 
-	// Execute claude command
-	claudeCmd := exec.Command("claude", finalArgs...)
+	// Locate claude binary (LookPath handles .exe/.cmd/.bat on Windows)
+	claudeBin, err := exec.LookPath("claude")
+	if err != nil {
+		exitWithError(fmt.Sprintf("claude command not found in PATH: %v", err))
+	}
+
+	claudeCmd := exec.Command(claudeBin, finalArgs...)
 	claudeCmd.Stdin = os.Stdin
 	claudeCmd.Stdout = os.Stdout
 	claudeCmd.Stderr = os.Stderr
