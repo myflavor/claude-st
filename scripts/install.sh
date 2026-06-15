@@ -63,5 +63,17 @@ fi
 chmod +x "$TMP_FILE"
 mv -f "$TMP_FILE" "$TARGET"
 
+# Set up ~/.claude-cli/ directory
+HOME_DIR="${HOME:-$(eval echo ~$(id -un))}"
+PROVIDERS_DIR="$HOME_DIR/.claude-cli"
+
+if [ ! -d "$PROVIDERS_DIR" ]; then
+    mkdir -p "$PROVIDERS_DIR"
+    echo ""
+    echo "Created providers directory: $PROVIDERS_DIR"
+    echo "Add a provider like: mkdir -p $PROVIDERS_DIR/<name> && cp settings.json $PROVIDERS_DIR/<name>/"
+fi
+
+echo ""
 echo "Installed to: $TARGET"
-echo "Test it with: $BINARY_NAME start -P claude"
+echo "Test it with: $BINARY_NAME start -P <provider-name>"

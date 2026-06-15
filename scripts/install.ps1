@@ -45,8 +45,20 @@ try {
     # Atomic move (overwrite)
     Move-Item -Force $TmpFile $Target
 
+    # Set up ~/.claude-cli/ directory
+    $HomeDir = $env:USERPROFILE
+    $ProvidersDir = Join-Path $HomeDir ".claude-cli"
+
+    if (-not (Test-Path $ProvidersDir)) {
+        New-Item -ItemType Directory -Path $ProvidersDir -Force | Out-Null
+        Write-Host ""
+        Write-Host "Created providers directory: $ProvidersDir"
+        Write-Host "Add a provider with your settings.json file inside a subfolder."
+    }
+
+    Write-Host ""
     Write-Host "Installed to: $Target"
-    Write-Host "Test it with: claude-cli start -P claude"
+    Write-Host "Test it with: claude-cli start -P <provider-name>"
 }
 catch {
     Remove-Item -Force $TmpFile -ErrorAction SilentlyContinue
