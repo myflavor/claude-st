@@ -1,7 +1,6 @@
 package cmd
 
 import (
-	"encoding/json"
 	"fmt"
 	"os"
 	"os/exec"
@@ -64,14 +63,18 @@ func runStart(cmd *cobra.Command, args []string) {
 	// Prepare arguments for claude command
 	finalArgs := make([]string, 0, len(claudeArgs)+2)
 
-	// If provider is specified, generate a merged settings file and pass via --settings
+	// If provider is specified, pass it via --settings
 	if provider != "" {
-		settingsPath, err := buildProviderSettings(provider)
+		homeDir, err := os.UserHomeDir()
 		if err != nil {
-			exitWithError(err.Error())
+			exitWithError(fmt.Sprintf("Failed to get home directory: %v", err))
+		}
+		settingsPath := filepath.Join(homeDir, ".claude-cli", provider, "settings.json")
+		if _, err := os.Stat(settingsPath); os.IsNotExist(err) {
+			exitWithError(fmt.Sprintf("Provider configuration not found: %s", settingsPath))
 		}
 		finalArgs = append(finalArgs, "--settings", settingsPath)
-		fmt.Printf("Using provider: %s (settings: %s)\n", provider, settingsPath)
+		fmt.Printf("Using provider: %s\n", provider)
 	}
 
 	// Add skip permissions flag if set
@@ -96,70 +99,4 @@ func runStart(cmd *cobra.Command, args []string) {
 		}
 		exitWithError(fmt.Sprintf("Failed to execute claude: %v", err))
 	}
-}
-
-func buildProviderSettings(provider string) (string, error) {
-	homeDir, err := os.UserHomeDir()
-	if err != nil {
-		return "", fmt.Errorf("failed to get home directory: %w", err)
-	}
-
-	providerPath := filepath.Join(homeDir, ".claude-cli", provider, "settings.json")
-	if _, err := os.Stat(providerPath); os.IsNotExist(err) {
-		return "", fmt.Errorf("provider configuration not found: %s", providerPath)
-	}
-
-	// Read provider settings
-	providerData, err := os.ReadFile(providerPath)
-	if err != nil {
-		return "", fmt.Errorf("failed to read provider settings: %w", err)
-	}
-
-	var providerSettings map[string]any
-	if err := json.Unmarshal(providerData, &providerSettings); err != nil {
-		return "", fmt.Errorf("failed to parse provider settings: %w", err)
-	}
-
-	// Read existing user settings (if any) and merge
-	userSettingsPath := filepath.Join(homeDir, ".claude", "settings.json")
-	if userData, err := os.ReadFile(userSettingsPath); err == nil {
-		var userSettings map[string]any
-		if err := json.Unmarshal(userData, &userSettings); err == nil {
-			// Merge: user settings as base, provider settings override
-			merged := mergeSettings(userSettings, providerSettings)
-
-			// Write merged settings to a temp file
-			tmpPath := filepath.Join(os.TempDir(), fmt.Sprintf("claude-cli-settings-%s.json", provider))
-			mergedData, err := json.MarshalIndent(merged, "", "  ")
-			if err != nil {
-				return "", fmt.Errorf("failed to marshal settings: %w", err)
-			}
-			if err := os.WriteFile(tmpPath, mergedData, 0644); err != nil {
-				return "", fmt.Errorf("failed to write settings: %w", err)
-			}
-			return tmpPath, nil
-		}
-	}
-
-	// No user settings, just use provider settings
-	tmpPath := filepath.Join(os.TempDir(), fmt.Sprintf("claude-cli-settings-%s.json", provider))
-	prettyData, err := json.MarshalIndent(providerSettings, "", "  ")
-	if err != nil {
-		return "", fmt.Errorf("failed to marshal settings: %w", err)
-	}
-	if err := os.WriteFile(tmpPath, prettyData, 0644); err != nil {
-		return "", fmt.Errorf("failed to write settings: %w", err)
-	}
-	return tmpPath, nil
-}
-
-func mergeSettings(base, overrides map[string]any) map[string]any {
-	merged := make(map[string]any, len(base))
-	for k, v := range base {
-		merged[k] = v
-	}
-	for k, v := range overrides {
-		merged[k] = v
-	}
-	return merged
 }

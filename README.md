@@ -17,22 +17,19 @@ go build -o claude-cli .
 ```
 
 **claude-cli 短参数（会先解析）：**
-- `-P <provider>`: 切换到 provider 配置（生成临时 settings 文件，通过 `--settings` 传给 claude）
+- `-P <provider>`: 切换到 provider 配置（通过 `--settings` 传给 claude）
 - `-S`: 跳过权限检查（添加 `-dangerously-skip-permissions`）
 - `-H`: 显示帮助
 
 **参数传递规则：**
 - `claude-cli` 的短参数（`-P`, `-S`, `-H`）会先被解析
 - 其他所有参数原样透传给 claude 官方
-- **不修改任何配置文件**，只生成临时文件用完即弃
 
 ### 工作原理
 
 `-P <provider>` 会：
-1. 读取 `~/.claude-cli/<provider>/settings.json`
-2. 与 `~/.claude/settings.json` 合并（provider 配置优先）
-3. 生成临时文件 `/tmp/claude-cli-settings-<provider>.json`
-4. 通过 `claude --settings <临时文件>` 启动
+1. 直接使用 `~/.claude-cli/<provider>/settings.json`
+2. 通过 `claude --settings <provider_settings>` 启动
 
 这样可以：
 - ✅ 完全覆盖 `~/.claude/settings.json` 的配置
