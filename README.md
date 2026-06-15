@@ -17,35 +17,49 @@ go build -o claude-cli .
 ```
 
 **claude-cli 短参数（会先解析）：**
-- `-P <provider>`: 注入 provider 环境变量（从 `~/.claude-cli/<provider>/settings.json` 读取）
+- `-P <provider>`: 切换到 provider 配置（生成临时 settings 文件，通过 `--settings` 传给 claude）
 - `-S`: 跳过权限检查（添加 `-dangerously-skip-permissions`）
 - `-H`: 显示帮助
 
 **参数传递规则：**
 - `claude-cli` 的短参数（`-P`, `-S`, `-H`）会先被解析
 - 其他所有参数原样透传给 claude 官方
-- **不修改任何配置文件**，只是临时注入环境变量启动
+- **不修改任何配置文件**，只生成临时文件用完即弃
+
+### 工作原理
+
+`-P <provider>` 会：
+1. 读取 `~/.claude-cli/<provider>/settings.json`
+2. 与 `~/.claude/settings.json` 合并（provider 配置优先）
+3. 生成临时文件 `/tmp/claude-cli-settings-<provider>.json`
+4. 通过 `claude --settings <临时文件>` 启动
+
+这样可以：
+- ✅ 完全覆盖 `~/.claude/settings.json` 的配置
+- ✅ 不污染原配置文件
+- ✅ 多个 provider 可以共存
+- ✅ 多个终端可以同时运行不同 provider
 
 ### 示例
 
 ```bash
-# 直接启动（不注入环境变量）
+# 直接启动（不切换配置）
 ./claude-cli start
 
-# 注入 minimax 环境变量并启动
-./claude-cli start -P minimax
+# 切换到 claude provider 并启动
+./claude-cli start -P claude
 
-# 注入环境变量 + 跳过权限检查
-./claude-cli start -P minimax -S
+# 切换 + 跳过权限检查
+./claude-cli start -P claude -S
 
 # 透传参数给 claude
-./claude-cli start -P minimax --model opus
+./claude-cli start -P claude --model opus
 ./claude-cli start -S --model sonnet         # 跳过权限 + 指定model
-./claude-cli start -P minimax -S -c          # 切换+跳过权限+continue
+./claude-cli start -P claude -S -c          # 切换+跳过权限+continue
 
 # 同时启动多个不同 provider（不冲突）
-./claude-cli start -P minimax --model opus
-./claude-cli start -P deepseek --model sonnet
+./claude-cli start -P claude     # 终端1
+./claude-cli start -P deepseek   # 终端2
 ```
 
 ### 传统方式：复制配置文件
@@ -56,21 +70,21 @@ go build -o claude-cli .
 
 将 `~/.claude-cli/<provider>/*` 中的配置文件复制到 `~/.claude/`。
 
-> 注意：这种方式会覆盖原配置，不推荐。推荐使用 `start -P` 临时注入环境变量。
+> 注意：这种方式会覆盖原配置，不推荐。推荐使用 `start -P`。
 
 ### Provider 配置示例
 
-在 `~/.claude-cli/minimax/settings.json` 中：
+在 `~/.claude-cli/claude/settings.json` 中：
 
 ```json
 {
   "env": {
-    "ANTHROPIC_BASE_URL": "https://api.minimaxi.com/anthropic",
-    "ANTHROPIC_AUTH_TOKEN": "sk-cp-xxx",
-    "ANTHROPIC_MODEL": "MiniMax-M3[1m]",
-    "ANTHROPIC_DEFAULT_SONNET_MODEL": "MiniMax-M3[1m]",
-    "ANTHROPIC_DEFAULT_OPUS_MODEL": "MiniMax-M3[1m]",
-    "ANTHROPIC_DEFAULT_HAIKU_MODEL": "MiniMax-M3[1m]"
+    "ANTHROPIC_BASE_URL": "https://muyuan.do",
+    "ANTHROPIC_AUTH_TOKEN": "sk-xxx",
+    "ANTHROPIC_MODEL": "claude-opus-4-6[1m]",
+    "ANTHROPIC_DEFAULT_SONNET_MODEL": "claude-opus-4-6[1m]",
+    "ANTHROPIC_DEFAULT_OPUS_MODEL": "claude-opus-4-6[1m]",
+    "ANTHROPIC_DEFAULT_HAIKU_MODEL": "claude-opus-4-6[1m]"
   }
 }
 ```
@@ -79,8 +93,8 @@ go build -o claude-cli .
 
 ```
 ~/.claude-cli/
-├── minimax/
-│   └── settings.json  # env 字段会被注入到环境变量
+├── claude/
+│   └── settings.json
 ├── deepseek/
 │   └── settings.json
 └── ...
