@@ -114,3 +114,28 @@ go build -o claude-cli .
 │   └── settings.json
 └── ...
 ```
+
+## 发布
+
+推送 tag 即可自动构建并发布 Release：
+
+```bash
+git tag v0.1.0
+git push origin v0.1.0
+```
+
+GitHub Action 会自动：
+- 在 6 个平台编译（Linux/macOS/Windows × amd64/arm64）
+- 创建 GitHub Release 并上传所有二进制
+- 生成 release notes
+
+### 支持的二进制
+
+| 平台 | 文件名 |
+|------|--------|
+| Linux x86_64 | `claude-cli` |
+| Linux ARM64 | `claude-cli-linux-arm64` |
+| macOS Intel | `claude-cli-darwin-amd64` |
+| macOS Apple Silicon | `claude-cli-darwin-arm64` |
+| Windows x86_64 | `claude-cli.exe` |
+| Windows ARM64 | `claude-cli-arm64.exe` |
