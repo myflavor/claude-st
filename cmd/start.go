@@ -17,7 +17,7 @@ var startCmd = &cobra.Command{
 
 Short flags (parsed by claude-cli):
   -P <name>    Use provider config from ~/.claude-cli/<name>/settings.json
-  -S           Skip permissions (adds -dangerously-skip-permissions)
+  -S           Skip permissions (adds --dangerously-skip-permissions)
 
 All other arguments are passed directly to claude.
 
@@ -79,7 +79,7 @@ func runStart(cmd *cobra.Command, args []string) {
 
 	// Add skip permissions flag if set
 	if skipPermissions {
-		finalArgs = append(finalArgs, "-dangerously-skip-permissions")
+		finalArgs = append(finalArgs, "--dangerously-skip-permissions")
 	}
 
 	finalArgs = append(finalArgs, claudeArgs...)

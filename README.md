@@ -36,7 +36,7 @@ go build -o claude-cli .
 
 **claude-cli 短参数（会先解析）：**
 - `-P <provider>`: 切换到 provider 配置（通过 `--settings` 传给 claude）
-- `-S`: 跳过权限检查（添加 `-dangerously-skip-permissions`）
+- `-S`: 跳过权限检查（添加 `--dangerously-skip-permissions`）
 - `-H`: 显示帮助
 
 **参数传递规则：**
