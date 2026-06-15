@@ -1,0 +1,10 @@
+# Build output
+claude-cli
+*.exe
+*.dll
+*.so
+*.dylib
+
+# Go workspace files
+go.work
+go.work.sum
