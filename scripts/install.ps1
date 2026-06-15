@@ -5,7 +5,7 @@ $ErrorActionPreference = "Stop"
 $Repo = "myflavor/claude-cli"
 $BinaryName = "claude-cli.exe"
 
-# Detect arch (Windows is always amd64 or arm64)
+# Detect arch
 $Arch = $env:PROCESSOR_ARCHITECTURE
 switch ($Arch) {
     "AMD64" { $Asset = "claude-cli.exe" }
@@ -26,8 +26,30 @@ if (-not $ClaudeCmd) {
 $ClaudeDir = Split-Path -Parent $ClaudeCmd.Source
 $Target = Join-Path $ClaudeDir $BinaryName
 
-Write-Host "Downloading $Asset from $Repo..."
-Invoke-WebRequest -Uri $DownloadUrl -OutFile $Target -UseBasicParsing
+# Check if already installed
+if (Test-Path $Target) {
+    Write-Host "Existing claude-cli found at: $Target"
+    Write-Host "Updating to latest..."
+}
 
-Write-Host "Installed to: $Target"
-Write-Host "Test it with: claude-cli start -P claude"
+# Download to temp file first
+$TmpFile = [System.IO.Path]::GetTempFileName()
+try {
+    Write-Host "Downloading $Asset from $Repo..."
+    Invoke-WebRequest -Uri $DownloadUrl -OutFile $TmpFile -UseBasicParsing
+
+    if ((Get-Item $TmpFile).Length -eq 0) {
+        throw "Downloaded file is empty"
+    }
+
+    # Atomic move (overwrite)
+    Move-Item -Force $TmpFile $Target
+
+    Write-Host "Installed to: $Target"
+    Write-Host "Test it with: claude-cli start -P claude"
+}
+catch {
+    Remove-Item -Force $TmpFile -ErrorAction SilentlyContinue
+    Write-Error "Error: $_"
+    exit 1
+}

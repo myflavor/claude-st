@@ -18,7 +18,6 @@ case "$OS-$ARCH" in
     *) echo "Unsupported platform: $OS-$ARCH"; exit 1 ;;
 esac
 
-# Get latest release URL
 DOWNLOAD_URL="https://github.com/$REPO/releases/latest/download/$ASSET"
 
 # Find claude location
@@ -32,9 +31,37 @@ fi
 CLAUDE_DIR=$(cd "$(dirname "$CLAUDE_PATH")" && pwd)
 TARGET="$CLAUDE_DIR/$BINARY_NAME"
 
+# Check if already installed
+if [ -f "$TARGET" ]; then
+    echo "Existing claude-cli found at: $TARGET"
+    echo "Updating to latest..."
+fi
+
+# Check write permission
+if [ -f "$TARGET" ] && [ ! -w "$TARGET" ]; then
+    echo "Error: no write permission to $TARGET"
+    echo "Try running with sudo, or install claude to a user-writable location"
+    exit 1
+fi
+
+# Download to temp file first, then move (atomic)
+TMP_FILE=$(mktemp)
+trap "rm -f $TMP_FILE" EXIT
+
 echo "Downloading $ASSET from $REPO..."
-curl -sSL -o "$TARGET" "$DOWNLOAD_URL"
-chmod +x "$TARGET"
+if ! curl -sSL -f -o "$TMP_FILE" "$DOWNLOAD_URL"; then
+    echo "Error: download failed"
+    exit 1
+fi
+
+# Verify the download looks like a binary
+if [ ! -s "$TMP_FILE" ]; then
+    echo "Error: downloaded file is empty"
+    exit 1
+fi
+
+chmod +x "$TMP_FILE"
+mv -f "$TMP_FILE" "$TARGET"
 
 echo "Installed to: $TARGET"
 echo "Test it with: $BINARY_NAME start -P claude"
