@@ -1,5 +1,7 @@
-# Build output
-claude-cli
+# Build output (root-level artifacts only — not the cmd/claude-* source dirs)
+/claude-st
+/claude-cfg
+/dist/
 *.exe
 *.dll
 *.so

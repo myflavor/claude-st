@@ -1,21 +1,18 @@
-# Install claude-cli from GitHub Releases
+# Install claude-st and claude-cfg from GitHub Releases
 # Usage: irm https://raw.githubusercontent.com/myflavor/claude-cli/main/scripts/install.ps1 | iex
 $ErrorActionPreference = "Stop"
 
 $Repo = "myflavor/claude-cli"
-$BinaryName = "claude-cli.exe"
 
-# Detect arch
+# Detect arch, map to release asset names
 $Arch = $env:PROCESSOR_ARCHITECTURE
 switch ($Arch) {
-    "AMD64" { $Asset = "claude-cli.exe" }
-    "ARM64" { $Asset = "claude-cli-arm64.exe" }
+    "AMD64" { $St = "claude-st.exe";       $Cfg = "claude-cfg.exe" }
+    "ARM64" { $St = "claude-st-arm64.exe"; $Cfg = "claude-cfg-arm64.exe" }
     default { Write-Error "Unsupported architecture: $Arch"; exit 1 }
 }
 
-$DownloadUrl = "https://github.com/$Repo/releases/latest/download/$Asset"
-
-# Find claude location
+# Find claude location (both binaries install next to it)
 $ClaudeCmd = Get-Command claude -ErrorAction SilentlyContinue
 if (-not $ClaudeCmd) {
     Write-Error "Error: claude command not found in PATH"
@@ -24,26 +21,27 @@ if (-not $ClaudeCmd) {
 }
 
 $ClaudeDir = Split-Path -Parent $ClaudeCmd.Source
-$Target = Join-Path $ClaudeDir $BinaryName
+$StTarget = Join-Path $ClaudeDir "claude-st.exe"
+$CfgTarget = Join-Path $ClaudeDir "claude-cfg.exe"
 
-# Check if already installed
-if (Test-Path $Target) {
-    Write-Host "Existing claude-cli found at: $Target"
-    Write-Host "Updating to latest..."
-}
-
-# Download to temp file first
-$TmpFile = [System.IO.Path]::GetTempFileName()
+$TmpSt = [System.IO.Path]::GetTempFileName()
+$TmpCfg = [System.IO.Path]::GetTempFileName()
 try {
-    Write-Host "Downloading $Asset from $Repo..."
-    Invoke-WebRequest -Uri $DownloadUrl -OutFile $TmpFile -UseBasicParsing
-
-    if ((Get-Item $TmpFile).Length -eq 0) {
-        throw "Downloaded file is empty"
+    function Download-Binary($Asset, $OutFile) {
+        $Url = "https://github.com/$Repo/releases/latest/download/$Asset"
+        Write-Host "Downloading $Asset from $Repo..."
+        Invoke-WebRequest -Uri $Url -OutFile $OutFile -UseBasicParsing
+        if ((Get-Item $OutFile).Length -eq 0) {
+            throw "Downloaded file is empty: $Asset"
+        }
     }
 
+    Download-Binary $St $TmpSt
+    Download-Binary $Cfg $TmpCfg
+
     # Atomic move (overwrite)
-    Move-Item -Force $TmpFile $Target
+    Move-Item -Force $TmpSt $StTarget
+    Move-Item -Force $TmpCfg $CfgTarget
 
     # Set up ~/.claude-cli/ directory
     $HomeDir = $env:USERPROFILE
@@ -53,15 +51,17 @@ try {
         New-Item -ItemType Directory -Path $ProvidersDir -Force | Out-Null
         Write-Host ""
         Write-Host "Created providers directory: $ProvidersDir"
-        Write-Host "Add a provider with your settings.json file inside a subfolder."
+        Write-Host "Add a provider by placing a settings JSON file at: $ProvidersDir\<name>.json"
     }
 
     Write-Host ""
-    Write-Host "Installed to: $Target"
-    Write-Host "Test it with: claude-cli start -P <provider-name>"
+    Write-Host "Installed to: $StTarget"
+    Write-Host "              $CfgTarget"
+    Write-Host "Test it with: claude-st <provider-name>"
 }
 catch {
-    Remove-Item -Force $TmpFile -ErrorAction SilentlyContinue
+    Remove-Item -Force $TmpSt -ErrorAction SilentlyContinue
+    Remove-Item -Force $TmpCfg -ErrorAction SilentlyContinue
     Write-Error "Error: $_"
     exit 1
 }

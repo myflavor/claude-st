@@ -17,12 +17,14 @@ jobs:
       fail-fast: false
       matrix:
         target:
-          - { os: linux,  arch: amd64, asset: claude-cli }
-          - { os: linux,  arch: arm64, asset: claude-cli-linux-arm64 }
-          - { os: darwin, arch: amd64, asset: claude-cli-darwin-amd64 }
-          - { os: darwin, arch: arm64, asset: claude-cli-darwin-arm64 }
-          - { os: windows, arch: amd64, asset: claude-cli.exe, ext: .exe }
-          - { os: windows, arch: arm64, asset: claude-cli-arm64.exe, ext: .exe }
+          # tag/ext reproduce the original naming: the linux-amd64 and
+          # windows-amd64 builds carry no platform tag; others do.
+          - { os: linux,   arch: amd64, tag: '',              ext: '' }
+          - { os: linux,   arch: arm64, tag: '-linux-arm64',  ext: '' }
+          - { os: darwin,  arch: amd64, tag: '-darwin-amd64', ext: '' }
+          - { os: darwin,  arch: arm64, tag: '-darwin-arm64', ext: '' }
+          - { os: windows, arch: amd64, tag: '',              ext: '.exe' }
+          - { os: windows, arch: arm64, tag: '-arm64',        ext: '.exe' }
 
     steps:
       - name: Checkout
@@ -31,23 +33,26 @@ jobs:
       - name: Set up Go
         uses: actions/setup-go@v5
         with:
-          go-version: '1.23'
+          go-version-file: go.mod
           cache: true
 
       - name: Build
         env:
           GOOS: ${{ matrix.target.os }}
           GOARCH: ${{ matrix.target.arch }}
-          ASSET: ${{ matrix.target.asset }}
+          ST: claude-st${{ matrix.target.tag }}${{ matrix.target.ext }}
+          CFG: claude-cfg${{ matrix.target.tag }}${{ matrix.target.ext }}
         run: |
           mkdir -p dist
-          go build -trimpath -ldflags="-s -w" -o "dist/$ASSET" .
+          go build -trimpath -ldflags="-s -w" -o "dist/$ST"  ./cmd/claude-st
+          go build -trimpath -ldflags="-s -w" -o "dist/$CFG" ./cmd/claude-cfg
 
-      - name: Upload artifact
+      - name: Upload artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: ${{ matrix.target.asset }}
-          path: dist/${{ matrix.target.asset }}
+          name: build-${{ matrix.target.os }}-${{ matrix.target.arch }}
+          path: dist/*
+          if-no-files-found: error
 
   release:
     name: Create Release
@@ -71,11 +76,17 @@ jobs:
         uses: softprops/action-gh-release@v2
         with:
           files: |
-            dist/claude-cli
-            dist/claude-cli-linux-arm64
-            dist/claude-cli-darwin-amd64
-            dist/claude-cli-darwin-arm64
-            dist/claude-cli.exe
-            dist/claude-cli-arm64.exe
+            dist/claude-st
+            dist/claude-st-linux-arm64
+            dist/claude-st-darwin-amd64
+            dist/claude-st-darwin-arm64
+            dist/claude-st.exe
+            dist/claude-st-arm64.exe
+            dist/claude-cfg
+            dist/claude-cfg-linux-arm64
+            dist/claude-cfg-darwin-amd64
+            dist/claude-cfg-darwin-arm64
+            dist/claude-cfg.exe
+            dist/claude-cfg-arm64.exe
           generate_release_notes: true
-          fail_on_unmatched_files: false
+          fail_on_unmatched_files: true

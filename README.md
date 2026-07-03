@@ -1,6 +1,11 @@
-# claude-cli
+# claude-st / claude-cfg
 
-Claude CLI 配置管理工具。
+Claude Code 的 provider 配置启动与管理工具，拆成两个单职责的二进制：
+
+- **`claude-st`** — 用某个 provider 启动 claude（非破坏性，走 `--settings`）
+- **`claude-cfg`** — 把某个 provider 复制覆盖到 `~/.claude/settings.json`（破坏性，不推荐）
+
+两者共用 `~/.claude-cli/` 下的 provider 配置。
 
 ## 安装
 
@@ -17,37 +22,37 @@ irm https://raw.githubusercontent.com/myflavor/claude-cli/main/scripts/install.p
 ```
 
 安装脚本会：
-1. 从 GitHub Releases 下载最新版本的二进制
-2. 放到和 `claude` 同一个目录（自动放到 PATH 里）
+1. 从 GitHub Releases 下载最新版 `claude-st` 和 `claude-cfg`
+2. 放到和 `claude` 同一个目录（自动在 PATH 里）
 
 ### 从源码编译
 
 ```bash
-go build -o claude-cli .
+go build -o claude-st  ./cmd/claude-st
+go build -o claude-cfg ./cmd/claude-cfg
 ```
 
 ## 使用方法
 
-### 启动 Claude（推荐）
+### claude-st —— 用 provider 启动（推荐）
 
 ```bash
-./claude-cli start [选项] [claude参数...]
+claude-st <provider> [claude 参数...]
 ```
 
-**claude-cli 短参数（会先解析）：**
-- `-P <provider>`: 切换到 provider 配置（通过 `--settings` 传给 claude）
-- `-S`: 跳过权限检查（添加 `--dangerously-skip-permissions`）
-- `-H`: 显示帮助
+`<provider>` 必传，选择 `~/.claude-cli/<provider>.json`。
 
-**参数传递规则：**
-- `claude-cli` 的短参数（`-P`, `-S`, `-H`）会先被解析
-- 其他所有参数原样透传给 claude 官方
+**claude-st 解析的短参数：**
+- `-S`：跳过权限检查（添加 `--dangerously-skip-permissions`）
+- `-H`：显示帮助
+
+其他所有参数原样透传给 claude。`<provider>` 是第一个非 flag 参数，可以放在 `-S` 之后。
 
 ### 工作原理
 
-`-P <provider>` 会：
-1. 直接使用 `~/.claude-cli/<provider>/settings.json`
-2. 通过 `claude --settings <provider_settings>` 启动
+`claude-st <provider>` 会：
+1. 读取 `~/.claude-cli/<provider>.json`
+2. 通过 `claude --settings <provider.json>` 启动
 
 这样可以：
 - ✅ 完全覆盖 `~/.claude/settings.json` 的配置
@@ -58,38 +63,35 @@ go build -o claude-cli .
 ### 示例
 
 ```bash
-# 直接启动（不切换配置）
-./claude-cli start
+# 用 minimax provider 启动
+claude-st minimax
 
-# 切换到 claude provider 并启动
-./claude-cli start -P claude
-
-# 切换 + 跳过权限检查
-./claude-cli start -P claude -S
+# 跳过权限检查
+claude-st minimax -S
 
 # 透传参数给 claude
-./claude-cli start -P claude --model opus
-./claude-cli start -S --model sonnet         # 跳过权限 + 指定model
-./claude-cli start -P claude -S -c          # 切换+跳过权限+continue
+claude-st minimax --model opus
+claude-st minimax -S -c          # 跳过权限 + continue
+claude-st -S deepseek            # flag 可以在 provider 之前
 
 # 同时启动多个不同 provider（不冲突）
-./claude-cli start -P claude     # 终端1
-./claude-cli start -P deepseek   # 终端2
+claude-st claude     # 终端1
+claude-st deepseek   # 终端2
 ```
 
-### 传统方式：复制配置文件
+### claude-cfg —— 复制覆盖配置（不推荐）
 
 ```bash
-./claude-cli config <provider>
+claude-cfg <provider>
 ```
 
-将 `~/.claude-cli/<provider>/*` 中的配置文件复制到 `~/.claude/`。
+把 `~/.claude-cli/<provider>.json` 复制到 `~/.claude/settings.json`，会覆盖原配置。
 
-> 注意：这种方式会覆盖原配置，不推荐。推荐使用 `start -P`。
+> 一般用 `claude-st` 就够了；`claude-cfg` 只在确实需要写回 `~/.claude/settings.json` 时用。
 
 ### Provider 配置示例
 
-在 `~/.claude-cli/claude/settings.json` 中：
+在 `~/.claude-cli/claude.json` 中：
 
 ```json
 {
@@ -108,34 +110,43 @@ go build -o claude-cli .
 
 ```
 ~/.claude-cli/
-├── claude/
-│   └── settings.json
-├── deepseek/
-│   └── settings.json
+├── claude.json
+├── deepseek.json
 └── ...
 ```
+
+### 从旧版迁移
+
+旧版用文件夹 `~/.claude-cli/<provider>/settings.json`，新版改用单文件 `~/.claude-cli/<provider>.json`。手动迁移：
+
+```bash
+mv ~/.claude-cli/<provider>/settings.json ~/.claude-cli/<provider>.json
+rmdir ~/.claude-cli/<provider>
+```
+
+旧版的 `claude-cli start -P <provider>` 对应新版的 `claude-st <provider>`；`claude-cli config <provider>` 对应 `claude-cfg <provider>`。
 
 ## 发布
 
 推送 tag 即可自动构建并发布 Release：
 
 ```bash
-git tag v0.1.0
-git push origin v0.1.0
+git tag v0.2.0
+git push origin v0.2.0
 ```
 
 GitHub Action 会自动：
-- 在 6 个平台编译（Linux/macOS/Windows × amd64/arm64）
+- 在 6 个平台编译两个二进制（共 12 个）
 - 创建 GitHub Release 并上传所有二进制
 - 生成 release notes
 
 ### 支持的二进制
 
-| 平台 | 文件名 |
-|------|--------|
-| Linux x86_64 | `claude-cli` |
-| Linux ARM64 | `claude-cli-linux-arm64` |
-| macOS Intel | `claude-cli-darwin-amd64` |
-| macOS Apple Silicon | `claude-cli-darwin-arm64` |
-| Windows x86_64 | `claude-cli.exe` |
-| Windows ARM64 | `claude-cli-arm64.exe` |
+| 平台 | claude-st | claude-cfg |
+|------|-----------|------------|
+| Linux x86_64 | `claude-st` | `claude-cfg` |
+| Linux ARM64 | `claude-st-linux-arm64` | `claude-cfg-linux-arm64` |
+| macOS Intel | `claude-st-darwin-amd64` | `claude-cfg-darwin-amd64` |
+| macOS Apple Silicon | `claude-st-darwin-arm64` | `claude-cfg-darwin-arm64` |
+| Windows x86_64 | `claude-st.exe` | `claude-cfg.exe` |
+| Windows ARM64 | `claude-st-arm64.exe` | `claude-cfg-arm64.exe` |
