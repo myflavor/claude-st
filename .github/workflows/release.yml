@@ -17,8 +17,9 @@ jobs:
       fail-fast: false
       matrix:
         target:
-          # Each platform builds claude-st + claude-cfg and zips them together
-          # as claude-cli-<os>-<arch>.zip.
+          # Each platform builds claude-st + claude-cfg and packs them together
+          # as claude-cli-<os>-<arch>.tar.gz (tar is built in on Linux, macOS,
+          # and Windows 10+, so the install scripts need no extra tools).
           - { os: linux,   arch: amd64, ext: '' }
           - { os: linux,   arch: arm64, ext: '' }
           - { os: darwin,  arch: amd64, ext: '' }
@@ -36,7 +37,7 @@ jobs:
           go-version-file: go.mod
           cache: true
 
-      - name: Build and zip
+      - name: Build and pack
         env:
           GOOS: ${{ matrix.target.os }}
           GOARCH: ${{ matrix.target.arch }}
@@ -45,13 +46,13 @@ jobs:
           mkdir -p stage dist
           go build -trimpath -ldflags="-s -w" -o "stage/claude-st${EXT}"  ./cmd/claude-st
           go build -trimpath -ldflags="-s -w" -o "stage/claude-cfg${EXT}" ./cmd/claude-cfg
-          (cd stage && zip -r "../dist/claude-cli-${GOOS}-${GOARCH}.zip" .)
+          (cd stage && tar -czf "../dist/claude-cli-${GOOS}-${GOARCH}.tar.gz" .)
 
       - name: Upload artifact
         uses: actions/upload-artifact@v4
         with:
-          name: zip-${{ matrix.target.os }}-${{ matrix.target.arch }}
-          path: dist/*.zip
+          name: tgz-${{ matrix.target.os }}-${{ matrix.target.arch }}
+          path: dist/*.tar.gz
           if-no-files-found: error
 
   release:
@@ -73,7 +74,7 @@ jobs:
         run: ls -la dist/
 
       # Wipe any pre-existing release for this tag (e.g. when re-releasing the
-      # same version) so stale assets don't linger alongside the new zip.
+      # same version) so stale assets don't linger alongside the new tarballs.
       - name: Delete existing release (if any)
         continue-on-error: true
         env:
@@ -84,11 +85,11 @@ jobs:
         uses: softprops/action-gh-release@v2
         with:
           files: |
-            dist/claude-cli-linux-amd64.zip
-            dist/claude-cli-linux-arm64.zip
-            dist/claude-cli-darwin-amd64.zip
-            dist/claude-cli-darwin-arm64.zip
-            dist/claude-cli-windows-amd64.zip
-            dist/claude-cli-windows-arm64.zip
+            dist/claude-cli-linux-amd64.tar.gz
+            dist/claude-cli-linux-arm64.tar.gz
+            dist/claude-cli-darwin-amd64.tar.gz
+            dist/claude-cli-darwin-arm64.tar.gz
+            dist/claude-cli-windows-amd64.tar.gz
+            dist/claude-cli-windows-arm64.tar.gz
           generate_release_notes: true
           fail_on_unmatched_files: true

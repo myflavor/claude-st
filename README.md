@@ -22,8 +22,10 @@ irm https://raw.githubusercontent.com/myflavor/claude-cli/main/scripts/install.p
 ```
 
 安装脚本会：
-1. 从 GitHub Releases 下载对应平台的 zip（`claude-cli-<os>-<arch>.zip`，内含 `claude-st` 和 `claude-cfg`）
+1. 从 GitHub Releases 下载对应平台的 tarball（`claude-cli-<os>-<arch>.tar.gz`，内含 `claude-st` 和 `claude-cfg`）
 2. 解压放到和 `claude` 同一个目录（自动在 PATH 里）
+
+> 解压用的是系统自带的 `tar`（Linux/macOS/Windows 10+ 都内置），无需额外安装任何工具。
 
 ### 从源码编译
 
@@ -136,19 +138,19 @@ git push origin v0.2.0
 ```
 
 GitHub Action 会自动：
-- 在 6 个平台编译 `claude-st` + `claude-cfg` 并打包成一个 zip（共 6 个 asset）
-- 创建 GitHub Release 并上传所有 zip
+- 在 6 个平台编译 `claude-st` + `claude-cfg` 并打包成一个 tarball（共 6 个 asset）
+- 创建 GitHub Release 并上传所有 tarball
 - 生成 release notes
 
 ### 发布产物
 
-每个 zip 内含 `claude-st` 和 `claude-cfg`（Windows 带 `.exe`）。
+每个 tarball 内含 `claude-st` 和 `claude-cfg`（Windows 带 `.exe`）。
 
 | 平台 | 下载文件 |
 |------|----------|
-| Linux x86_64 | `claude-cli-linux-amd64.zip` |
-| Linux ARM64 | `claude-cli-linux-arm64.zip` |
-| macOS Intel | `claude-cli-darwin-amd64.zip` |
-| macOS Apple Silicon | `claude-cli-darwin-arm64.zip` |
-| Windows x86_64 | `claude-cli-windows-amd64.zip` |
-| Windows ARM64 | `claude-cli-windows-arm64.zip` |
+| Linux x86_64 | `claude-cli-linux-amd64.tar.gz` |
+| Linux ARM64 | `claude-cli-linux-arm64.tar.gz` |
+| macOS Intel | `claude-cli-darwin-amd64.tar.gz` |
+| macOS Apple Silicon | `claude-cli-darwin-arm64.tar.gz` |
+| Windows x86_64 | `claude-cli-windows-amd64.tar.gz` |
+| Windows ARM64 | `claude-cli-windows-arm64.tar.gz` |

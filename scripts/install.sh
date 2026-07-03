@@ -2,13 +2,14 @@
 # Install claude-st and claude-cfg from GitHub Releases
 # Usage: curl -sSL https://raw.githubusercontent.com/myflavor/claude-cli/main/scripts/install.sh | bash
 #
-# Downloads a single per-platform zip (claude-cli-<os>-<arch>.zip) containing
-# both binaries and extracts them next to claude.
+# Downloads a single per-platform tarball (claude-cli-<os>-<arch>.tar.gz)
+# containing both binaries and extracts them next to claude. Uses only tar,
+# which is built in on Linux and macOS.
 set -e
 
 REPO="myflavor/claude-cli"
 
-# Detect OS and arch, map to the release zip name
+# Detect OS and arch, map to the release tarball name
 OS=$(uname -s | tr '[:upper:]' '[:lower:]')
 ARCH=$(uname -m)
 
@@ -19,17 +20,16 @@ case "$ARCH" in
 esac
 
 case "$OS-$ARCH" in
-    linux-amd64)   ZIP="claude-cli-linux-amd64.zip" ;;
-    linux-arm64)   ZIP="claude-cli-linux-arm64.zip" ;;
-    darwin-amd64)  ZIP="claude-cli-darwin-amd64.zip" ;;
-    darwin-arm64)  ZIP="claude-cli-darwin-arm64.zip" ;;
+    linux-amd64)   TGZ="claude-cli-linux-amd64.tar.gz" ;;
+    linux-arm64)   TGZ="claude-cli-linux-arm64.tar.gz" ;;
+    darwin-amd64)  TGZ="claude-cli-darwin-amd64.tar.gz" ;;
+    darwin-arm64)  TGZ="claude-cli-darwin-arm64.tar.gz" ;;
     *) echo "Unsupported platform: $OS-$ARCH"; exit 1 ;;
 esac
 
-# unzip is required to extract the archive
-if ! command -v unzip >/dev/null 2>&1; then
-    echo "Error: 'unzip' is required but not installed."
-    echo "Install it first, e.g.: sudo apt install unzip   /   brew install unzip"
+# tar is required to extract the archive (built in on Linux/macOS)
+if ! command -v tar >/dev/null 2>&1; then
+    echo "Error: 'tar' is required but not found (very unusual on Linux/macOS)."
     exit 1
 fi
 
@@ -59,17 +59,17 @@ check_writable "$CFG_TARGET"
 TMP_DIR=$(mktemp -d)
 trap "rm -rf $TMP_DIR" EXIT
 
-echo "Downloading $ZIP from $REPO..."
-if ! curl -sSL -f -o "$TMP_DIR/$ZIP" "https://github.com/$REPO/releases/latest/download/$ZIP"; then
-    echo "Error: download failed for $ZIP"
+echo "Downloading $TGZ from $REPO..."
+if ! curl -sSL -f -o "$TMP_DIR/$TGZ" "https://github.com/$REPO/releases/latest/download/$TGZ"; then
+    echo "Error: download failed for $TGZ"
     exit 1
 fi
-if [ ! -s "$TMP_DIR/$ZIP" ]; then
-    echo "Error: downloaded file is empty: $ZIP"
+if [ ! -s "$TMP_DIR/$TGZ" ]; then
+    echo "Error: downloaded file is empty: $TGZ"
     exit 1
 fi
 
-unzip -o "$TMP_DIR/$ZIP" -d "$TMP_DIR" >/dev/null
+tar -xzf "$TMP_DIR/$TGZ" -C "$TMP_DIR"
 chmod +x "$TMP_DIR/claude-st" "$TMP_DIR/claude-cfg"
 
 # Atomic move into place
