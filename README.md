@@ -22,8 +22,8 @@ irm https://raw.githubusercontent.com/myflavor/claude-cli/main/scripts/install.p
 ```
 
 安装脚本会：
-1. 从 GitHub Releases 下载最新版 `claude-st` 和 `claude-cfg`
-2. 放到和 `claude` 同一个目录（自动在 PATH 里）
+1. 从 GitHub Releases 下载对应平台的 zip（`claude-cli-<os>-<arch>.zip`，内含 `claude-st` 和 `claude-cfg`）
+2. 解压放到和 `claude` 同一个目录（自动在 PATH 里）
 
 ### 从源码编译
 
@@ -136,17 +136,19 @@ git push origin v0.2.0
 ```
 
 GitHub Action 会自动：
-- 在 6 个平台编译两个二进制（共 12 个）
-- 创建 GitHub Release 并上传所有二进制
+- 在 6 个平台编译 `claude-st` + `claude-cfg` 并打包成一个 zip（共 6 个 asset）
+- 创建 GitHub Release 并上传所有 zip
 - 生成 release notes
 
-### 支持的二进制
+### 发布产物
 
-| 平台 | claude-st | claude-cfg |
-|------|-----------|------------|
-| Linux x86_64 | `claude-st` | `claude-cfg` |
-| Linux ARM64 | `claude-st-linux-arm64` | `claude-cfg-linux-arm64` |
-| macOS Intel | `claude-st-darwin-amd64` | `claude-cfg-darwin-amd64` |
-| macOS Apple Silicon | `claude-st-darwin-arm64` | `claude-cfg-darwin-arm64` |
-| Windows x86_64 | `claude-st.exe` | `claude-cfg.exe` |
-| Windows ARM64 | `claude-st-arm64.exe` | `claude-cfg-arm64.exe` |
+每个 zip 内含 `claude-st` 和 `claude-cfg`（Windows 带 `.exe`）。
+
+| 平台 | 下载文件 |
+|------|----------|
+| Linux x86_64 | `claude-cli-linux-amd64.zip` |
+| Linux ARM64 | `claude-cli-linux-arm64.zip` |
+| macOS Intel | `claude-cli-darwin-amd64.zip` |
+| macOS Apple Silicon | `claude-cli-darwin-arm64.zip` |
+| Windows x86_64 | `claude-cli-windows-amd64.zip` |
+| Windows ARM64 | `claude-cli-windows-arm64.zip` |

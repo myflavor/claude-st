@@ -1,21 +1,37 @@
 #!/bin/bash
 # Install claude-st and claude-cfg from GitHub Releases
 # Usage: curl -sSL https://raw.githubusercontent.com/myflavor/claude-cli/main/scripts/install.sh | bash
+#
+# Downloads a single per-platform zip (claude-cli-<os>-<arch>.zip) containing
+# both binaries and extracts them next to claude.
 set -e
 
 REPO="myflavor/claude-cli"
 
-# Detect OS and arch, map to release asset names
+# Detect OS and arch, map to the release zip name
 OS=$(uname -s | tr '[:upper:]' '[:lower:]')
 ARCH=$(uname -m)
 
+case "$ARCH" in
+    x86_64)  ARCH=amd64 ;;
+    aarch64) ARCH=arm64 ;;
+    *) echo "Unsupported arch: $ARCH"; exit 1 ;;
+esac
+
 case "$OS-$ARCH" in
-    linux-x86_64)  ST="claude-st";             CFG="claude-cfg" ;;
-    linux-aarch64) ST="claude-st-linux-arm64"; CFG="claude-cfg-linux-arm64" ;;
-    darwin-x86_64) ST="claude-st-darwin-amd64"; CFG="claude-cfg-darwin-amd64" ;;
-    darwin-arm64)  ST="claude-st-darwin-arm64"; CFG="claude-cfg-darwin-arm64" ;;
+    linux-amd64)   ZIP="claude-cli-linux-amd64.zip" ;;
+    linux-arm64)   ZIP="claude-cli-linux-arm64.zip" ;;
+    darwin-amd64)  ZIP="claude-cli-darwin-amd64.zip" ;;
+    darwin-arm64)  ZIP="claude-cli-darwin-arm64.zip" ;;
     *) echo "Unsupported platform: $OS-$ARCH"; exit 1 ;;
 esac
+
+# unzip is required to extract the archive
+if ! command -v unzip >/dev/null 2>&1; then
+    echo "Error: 'unzip' is required but not installed."
+    echo "Install it first, e.g.: sudo apt install unzip   /   brew install unzip"
+    exit 1
+fi
 
 # Find claude location (both binaries install next to it)
 CLAUDE_PATH=$(command -v claude)
@@ -43,23 +59,18 @@ check_writable "$CFG_TARGET"
 TMP_DIR=$(mktemp -d)
 trap "rm -rf $TMP_DIR" EXIT
 
-download() {
-    local asset="$1"
-    local out="$2"
-    echo "Downloading $asset from $REPO..."
-    if ! curl -sSL -f -o "$out" "https://github.com/$REPO/releases/latest/download/$asset"; then
-        echo "Error: download failed for $asset"
-        exit 1
-    fi
-    if [ ! -s "$out" ]; then
-        echo "Error: downloaded file is empty: $asset"
-        exit 1
-    fi
-    chmod +x "$out"
-}
+echo "Downloading $ZIP from $REPO..."
+if ! curl -sSL -f -o "$TMP_DIR/$ZIP" "https://github.com/$REPO/releases/latest/download/$ZIP"; then
+    echo "Error: download failed for $ZIP"
+    exit 1
+fi
+if [ ! -s "$TMP_DIR/$ZIP" ]; then
+    echo "Error: downloaded file is empty: $ZIP"
+    exit 1
+fi
 
-download "$ST"  "$TMP_DIR/claude-st"
-download "$CFG" "$TMP_DIR/claude-cfg"
+unzip -o "$TMP_DIR/$ZIP" -d "$TMP_DIR" >/dev/null
+chmod +x "$TMP_DIR/claude-st" "$TMP_DIR/claude-cfg"
 
 # Atomic move into place
 mv -f "$TMP_DIR/claude-st"  "$ST_TARGET"
