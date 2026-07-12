@@ -54,13 +54,15 @@ claude-st <provider> [claude 参数...]
 
 `claude-st <provider>` 会：
 1. 读取 `~/.claude-cli/<provider>.json`
-2. 通过 `claude --settings <provider.json>` 启动
+2. 若存在 `~/.claude-cli/.mcp.json`，通过 `--mcp-config` 注入（所有 provider 共用）
+3. 通过 `claude --settings <provider.json>` 启动
 
 这样可以：
 - ✅ 完全覆盖 `~/.claude/settings.json` 的配置
 - ✅ 不污染原配置文件
 - ✅ 多个 provider 可以共存
 - ✅ 多个终端可以同时运行不同 provider
+- ✅ 全局 MCP 对每个 provider 生效，且不写项目 `.mcp.json`
 
 ### 示例
 
@@ -79,6 +81,9 @@ claude-st -S deepseek            # flag 可以在 provider 之前
 # 同时启动多个不同 provider（不冲突）
 claude-st claude     # 终端1
 claude-st deepseek   # 终端2
+
+# 额外再叠一层临时 MCP（仍会带上全局 .mcp.json）
+claude-st minimax --mcp-config /tmp/extra-mcp.json
 ```
 
 ### claude-cfg —— 复制覆盖配置（不推荐）
@@ -108,10 +113,26 @@ claude-cfg <provider>
 }
 ```
 
+### 全局 MCP 配置示例
+
+在 `~/.claude-cli/.mcp.json` 中（所有 provider 共用，文件不存在则不注入）：
+
+```json
+{
+  "mcpServers": {
+    "filesystem": {
+      "command": "npx",
+      "args": ["-y", "@modelcontextprotocol/server-filesystem", "/tmp"]
+    }
+  }
+}
+```
+
 ## 目录结构
 
 ```
 ~/.claude-cli/
+├── .mcp.json         # 可选，全局 MCP（所有 provider 自动注入）
 ├── claude.json
 ├── deepseek.json
 └── ...

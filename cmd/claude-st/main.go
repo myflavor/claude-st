@@ -6,8 +6,10 @@
 //	claude-st <provider> -S [claude args...]
 //
 // <provider> is required and selects ~/.claude-cli/<provider>.json, which is
-// passed to claude via --settings. -S adds --dangerously-skip-permissions.
-// All other arguments are passed through to claude unchanged.
+// passed to claude via --settings. If ~/.claude-cli/.mcp.json exists, it is
+// injected via --mcp-config for every provider. -S adds
+// --dangerously-skip-permissions. All other arguments are passed through to
+// claude unchanged.
 package main
 
 import (
@@ -29,6 +31,10 @@ var rootCmd = &cobra.Command{
 <provider> is required and selects ~/.claude-cli/<provider>.json, which is
 passed to claude via --settings. Multiple providers can run side by side in
 different terminals without overwriting ~/.claude/settings.json.
+
+If ~/.claude-cli/.mcp.json exists, it is automatically passed as --mcp-config
+so every provider gets the same global MCP servers (session-scoped; does not
+write project .mcp.json).
 
 Short flags (parsed by claude-st):
   -S    Skip permissions (adds --dangerously-skip-permissions)
@@ -92,9 +98,20 @@ func run(cmd *cobra.Command, args []string) {
 		os.Exit(1)
 	}
 
-	// Build the claude argument list: --settings first, then optional -S, then passthrough.
-	finalArgs := make([]string, 0, len(claudeArgs)+3)
+	// Optional global MCP shared by all providers.
+	var mcpPath string
+	if p, err := provider.MCPFile(); err == nil {
+		if _, err := os.Stat(p); err == nil {
+			mcpPath = p
+		}
+	}
+
+	// Build the claude argument list: --settings, optional --mcp-config, optional -S, then passthrough.
+	finalArgs := make([]string, 0, len(claudeArgs)+5)
 	finalArgs = append(finalArgs, "--settings", settingsPath)
+	if mcpPath != "" {
+		finalArgs = append(finalArgs, "--mcp-config", mcpPath)
+	}
 	if skipPermissions {
 		finalArgs = append(finalArgs, "--dangerously-skip-permissions")
 	}
@@ -108,6 +125,9 @@ func run(cmd *cobra.Command, args []string) {
 	}
 
 	fmt.Printf("Using provider: %s\n", providerName)
+	if mcpPath != "" {
+		fmt.Printf("Using MCP config: %s\n", mcpPath)
+	}
 
 	claudeCmd := exec.Command(claudeBin, finalArgs...)
 	claudeCmd.Stdin = os.Stdin
