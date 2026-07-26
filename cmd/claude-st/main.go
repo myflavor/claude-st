@@ -129,16 +129,8 @@ func run(cmd *cobra.Command, args []string) {
 		fmt.Printf("Using MCP config: %s\n", mcpPath)
 	}
 
-	claudeCmd := exec.Command(claudeBin, finalArgs...)
-	claudeCmd.Stdin = os.Stdin
-	claudeCmd.Stdout = os.Stdout
-	claudeCmd.Stderr = os.Stderr
-
-	if err := claudeCmd.Run(); err != nil {
-		if exitErr, ok := err.(*exec.ExitError); ok {
-			os.Exit(exitErr.ExitCode())
-		}
-		fmt.Fprintf(os.Stderr, "Error: failed to execute claude: %v\n", err)
-		os.Exit(1)
-	}
+	// Replace this process with claude (Unix) or spawn it (Windows). See
+	// launch_*.go. Replacing the process keeps claude as the direct foreground
+	// process so terminal/mouse control is not disrupted by a parent wrapper.
+	launch(claudeBin, finalArgs)
 }
