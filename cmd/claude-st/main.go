@@ -36,6 +36,11 @@ If ~/.claude-cli/.mcp.json exists, it is automatically passed as --mcp-config
 so every provider gets the same global MCP servers (session-scoped; does not
 write project .mcp.json).
 
+If ~/.claude-cli/.env exists, each KEY=VALUE is exported into the environment
+before launching claude. Variables already set in the shell are not overridden,
+so common settings like CLAUDE_CODE_NO_FLICKER=1 apply to every provider
+without repeating them in each settings file.
+
 Short flags (parsed by claude-st):
   -S    Skip permissions (adds --dangerously-skip-permissions)
   -H    Show help
@@ -127,6 +132,18 @@ func run(cmd *cobra.Command, args []string) {
 	fmt.Printf("Using provider: %s\n", providerName)
 	if mcpPath != "" {
 		fmt.Printf("Using MCP config: %s\n", mcpPath)
+	}
+
+	// Optional global env file (~/.claude-cli/.env). Variables already set in
+	// the shell are not overridden, so shell exports win over .env defaults.
+	if envPath, err := provider.EnvFile(); err == nil {
+		if _, err := os.Stat(envPath); err == nil {
+			if n, lerr := provider.LoadEnv(envPath); lerr != nil {
+				fmt.Fprintf(os.Stderr, "Warning: %s: %v\n", envPath, lerr)
+			} else if n > 0 {
+				fmt.Printf("Using env: %s\n", envPath)
+			}
+		}
 	}
 
 	// Replace this process with claude (Unix) or spawn it (Windows). See

@@ -55,7 +55,8 @@ claude-st <provider> [claude 参数...]
 `claude-st <provider>` 会：
 1. 读取 `~/.claude-cli/<provider>.json`
 2. 若存在 `~/.claude-cli/.mcp.json`，通过 `--mcp-config` 注入（所有 provider 共用）
-3. 通过 `claude --settings <provider.json>` 启动
+3. 若存在 `~/.claude-cli/.env`，把其中 `KEY=VALUE` 导入环境（shell 已设的不覆盖）
+4. 通过 `claude --settings <provider.json>` 启动
 
 这样可以：
 - ✅ 完全覆盖 `~/.claude/settings.json` 的配置
@@ -85,6 +86,19 @@ claude-st deepseek   # 终端2
 # 额外再叠一层临时 MCP（仍会带上全局 .mcp.json）
 claude-st minimax --mcp-config /tmp/extra-mcp.json
 ```
+
+### 全局 env 文件（~/.claude-cli/.env）
+
+若存在 `~/.claude-cli/.env`，启动时会逐行导入 `KEY=VALUE` 到环境（所有 provider 共用，且不会写进任何 settings 文件）。shell 里已 export 的同名变量不会被覆盖。
+
+```bash
+# ~/.claude-cli/.env
+CLAUDE_CODE_NO_FLICKER=1                     # 强制 flicker-free 渲染（恢复鼠标点击）
+CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC=1   # 禁遥测
+# DISABLE_TELEMETRY=1                        # 或只禁遥测
+```
+
+> 适合放"每个 provider 都想要、但不想在每个 settings.json 里重复"的通用变量。provider 自己的 `env`（在 `<provider>.json` 里）仍会生效，可覆盖这里设的值。
 
 ### claude-cfg —— 复制覆盖配置（不推荐）
 
