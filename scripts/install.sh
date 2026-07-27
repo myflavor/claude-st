@@ -15,7 +15,7 @@ ARCH=$(uname -m)
 
 case "$ARCH" in
     x86_64)  ARCH=amd64 ;;
-    aarch64) ARCH=arm64 ;;
+    aarch64|arm64) ARCH=arm64 ;;
     *) echo "Unsupported arch: $ARCH"; exit 1 ;;
 esac
 
@@ -72,9 +72,17 @@ fi
 tar -xzf "$TMP_DIR/$TGZ" -C "$TMP_DIR"
 chmod +x "$TMP_DIR/claude-st" "$TMP_DIR/claude-cfg"
 
-# Atomic move into place
-mv -f "$TMP_DIR/claude-st"  "$ST_TARGET"
-mv -f "$TMP_DIR/claude-cfg" "$CFG_TARGET"
+# Move into place atomically: stage in the target directory then rename.
+# A direct mv from $TMP_DIR can cross filesystems (e.g. /tmp -> /usr/local/bin)
+# and leave a half-written binary visible to other processes mid-copy; the
+# final rename is atomic on the same filesystem.
+install_bin() {
+    src="$1"; dst="$2"; tmp="$dst.new.$$"
+    cp -f "$src" "$tmp" || { rm -f "$tmp"; echo "Error: failed to stage $dst"; exit 1; }
+    mv -f "$tmp" "$dst" || { rm -f "$tmp"; echo "Error: failed to install $dst"; exit 1; }
+}
+install_bin "$TMP_DIR/claude-st"  "$ST_TARGET"
+install_bin "$TMP_DIR/claude-cfg" "$CFG_TARGET"
 
 # Set up ~/.claude-cli/ directory
 HOME_DIR="${HOME:-$(eval echo ~$(id -un))}"

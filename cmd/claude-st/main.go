@@ -76,8 +76,14 @@ func run(cmd *cobra.Command, args []string) {
 		case "-S":
 			skipPermissions = true
 		case "-H", "--help":
-			cmd.Help()
-			return
+			// Only claim -H/--help before the provider is set; once a
+			// provider is chosen, forward --help (and everything else) to
+			// claude, matching the "all other args pass through" contract.
+			if providerName == "" {
+				cmd.Help()
+				return
+			}
+			claudeArgs = append(claudeArgs, arg)
 		default:
 			if providerName == "" && !strings.HasPrefix(arg, "-") {
 				providerName = arg
@@ -98,8 +104,8 @@ func run(cmd *cobra.Command, args []string) {
 		fmt.Fprintf(os.Stderr, "Error: %v\n", err)
 		os.Exit(1)
 	}
-	if _, err := os.Stat(settingsPath); os.IsNotExist(err) {
-		fmt.Fprintf(os.Stderr, "Error: provider configuration not found: %s\n", settingsPath)
+	if _, err := os.Stat(settingsPath); err != nil {
+		fmt.Fprintf(os.Stderr, "Error: provider configuration not accessible: %s: %v\n", settingsPath, err)
 		os.Exit(1)
 	}
 
@@ -138,9 +144,14 @@ func run(cmd *cobra.Command, args []string) {
 	// the shell are not overridden, so shell exports win over .env defaults.
 	if envPath, err := provider.EnvFile(); err == nil {
 		if _, err := os.Stat(envPath); err == nil {
-			if n, lerr := provider.LoadEnv(envPath); lerr != nil {
-				fmt.Fprintf(os.Stderr, "Warning: %s: %v\n", envPath, lerr)
-			} else if n > 0 {
+			n, lerr := provider.LoadEnv(envPath)
+			if lerr != nil {
+				// Fail rather than launch claude with a partially-applied env
+				// (e.g. ANTHROPIC_BASE_URL set but MODEL missing).
+				fmt.Fprintf(os.Stderr, "Error: invalid env file %s: %v\n", envPath, lerr)
+				os.Exit(1)
+			}
+			if n > 0 {
 				fmt.Printf("Using env: %s\n", envPath)
 			}
 		}

@@ -48,8 +48,8 @@ func run(cmd *cobra.Command, args []string) {
 		fmt.Fprintf(os.Stderr, "Error: %v\n", err)
 		os.Exit(1)
 	}
-	if _, err := os.Stat(src); os.IsNotExist(err) {
-		fmt.Fprintf(os.Stderr, "Error: provider configuration not found: %s\n", src)
+	if _, err := os.Stat(src); err != nil {
+		fmt.Fprintf(os.Stderr, "Error: provider configuration not accessible: %s: %v\n", src, err)
 		os.Exit(1)
 	}
 
@@ -71,8 +71,17 @@ func run(cmd *cobra.Command, args []string) {
 		fmt.Fprintf(os.Stderr, "Error: failed to read %s: %v\n", src, err)
 		os.Exit(1)
 	}
-	if err := os.WriteFile(dst, data, 0644); err != nil {
-		fmt.Fprintf(os.Stderr, "Error: failed to write %s: %v\n", dst, err)
+	// Write to a temp file in the same directory, then rename over dst.
+	// os.WriteFile truncates dst before writing; a partial write (ENOSPC,
+	// crash) would leave settings.json truncated with no backup. Rename is
+	// atomic on the same filesystem.
+	tmp := dst + ".tmp"
+	if err := os.WriteFile(tmp, data, 0644); err != nil {
+		fmt.Fprintf(os.Stderr, "Error: failed to write %s: %v\n", tmp, err)
+		os.Exit(1)
+	}
+	if err := os.Rename(tmp, dst); err != nil {
+		fmt.Fprintf(os.Stderr, "Error: failed to install %s: %v\n", dst, err)
 		os.Exit(1)
 	}
 

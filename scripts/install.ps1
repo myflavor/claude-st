@@ -47,9 +47,16 @@ try {
 
     tar -xzf $TmpTgz -C $ExtractDir
 
-    # Atomic move (overwrite)
-    Move-Item -Force (Join-Path $ExtractDir "claude-st.exe") $StTarget
-    Move-Item -Force (Join-Path $ExtractDir "claude-cfg.exe") $CfgTarget
+    # Stage in the target directory then rename into place. A direct move
+    # from the temp dir can cross volumes and expose a half-written binary;
+    # staging in the target dir makes the final rename atomic on the same
+    # volume.
+    $StStaged = Join-Path $ClaudeDir ".claude-st.exe.tmp"
+    $CfgStaged = Join-Path $ClaudeDir ".claude-cfg.exe.tmp"
+    Copy-Item -Force (Join-Path $ExtractDir "claude-st.exe") $StStaged
+    Copy-Item -Force (Join-Path $ExtractDir "claude-cfg.exe") $CfgStaged
+    Move-Item -Force $StStaged $StTarget
+    Move-Item -Force $CfgStaged $CfgTarget
 
     # Set up ~/.claude-cli/ directory
     $HomeDir = $env:USERPROFILE
@@ -74,4 +81,7 @@ catch {
 finally {
     Remove-Item -Force $TmpTgz -ErrorAction SilentlyContinue
     Remove-Item -Recurse -Force $ExtractDir -ErrorAction SilentlyContinue
+    foreach ($s in @($StStaged, $CfgStaged)) {
+        if ($s -and (Test-Path $s)) { Remove-Item -Force $s -ErrorAction SilentlyContinue }
+    }
 }

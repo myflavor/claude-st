@@ -69,3 +69,25 @@ func TestLoadEnvMissingFile(t *testing.T) {
 		t.Fatal("expected error for missing file")
 	}
 }
+
+func TestLoadEnvAtomicOnError(t *testing.T) {
+	path := filepath.Join(t.TempDir(), ".env")
+	// GOOD_KEY appears before the malformed line; it must NOT be applied
+	// because the whole file failed to parse.
+	content := "GOOD_KEY=should_not_apply\nBADLINE\n"
+	if err := os.WriteFile(path, []byte(content), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() { os.Unsetenv("GOOD_KEY") })
+
+	n, err := LoadEnv(path)
+	if err == nil {
+		t.Fatal("expected error for line without '='")
+	}
+	if n != 0 {
+		t.Errorf("n=%d want 0 (nothing applied on parse error)", n)
+	}
+	if got := os.Getenv("GOOD_KEY"); got != "" {
+		t.Errorf("GOOD_KEY=%q want empty (must not apply on parse error)", got)
+	}
+}
