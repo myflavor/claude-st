@@ -9,7 +9,6 @@ import (
 )
 
 // EnvFile returns the path to the global env file (~/.claude-cli/.env).
-// It is optional: if the file does not exist, claude-st skips it silently.
 func EnvFile() (string, error) {
 	dir, err := Dir()
 	if err != nil {
@@ -18,22 +17,17 @@ func EnvFile() (string, error) {
 	return filepath.Join(dir, ".env"), nil
 }
 
-// LoadEnv parses a dotenv file at path and exports each KEY=VALUE into the
-// process environment. Variables already set in the environment are NOT
-// overridden, so shell exports take precedence over .env defaults.
-//
-// Supported syntax: blank lines and # comments; an optional "export " prefix;
-// surrounding single or double quotes around the value (so values may contain
-// '#' or spaces).
-//
-// The file is parsed fully before any variable is applied: on a parse error
-// nothing is exported, so claude is never launched with a partially-applied
-// environment. It returns the count of variables parsed (including ones
-// skipped because they were already set).
+// LoadEnv parses a dotenv file and exports each KEY=VALUE into the process
+// environment. Variables already set in the environment are not overridden
+// (shell exports win). The env file is optional: if it cannot be opened for
+// any reason (missing, permission denied, stale NFS handle, etc.) LoadEnv
+// returns (0, nil) without error. The file is parsed fully before applying
+// anything, so a parse error leaves the environment untouched.
 func LoadEnv(path string) (int, error) {
 	f, err := os.Open(path)
 	if err != nil {
-		return 0, err
+		// The env file is optional; any failure to open it is non-fatal.
+		return 0, nil
 	}
 	defer f.Close()
 
@@ -67,7 +61,6 @@ func LoadEnv(path string) (int, error) {
 	if err := sc.Err(); err != nil {
 		return 0, err
 	}
-	// Apply only after the whole file parsed cleanly.
 	n := 0
 	for _, e := range entries {
 		if _, ok := os.LookupEnv(e.key); !ok {

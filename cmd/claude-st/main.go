@@ -76,9 +76,7 @@ func run(cmd *cobra.Command, args []string) {
 		case "-S":
 			skipPermissions = true
 		case "-H", "--help":
-			// Only claim -H/--help before the provider is set; once a
-			// provider is chosen, forward --help (and everything else) to
-			// claude, matching the "all other args pass through" contract.
+			// Only claim -H/--help before the provider; afterwards forward to claude.
 			if providerName == "" {
 				cmd.Help()
 				return
@@ -99,13 +97,9 @@ func run(cmd *cobra.Command, args []string) {
 		os.Exit(1)
 	}
 
-	settingsPath, err := provider.File(providerName)
+	settingsPath, err := provider.Resolve(providerName)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "Error: %v\n", err)
-		os.Exit(1)
-	}
-	if _, err := os.Stat(settingsPath); err != nil {
-		fmt.Fprintf(os.Stderr, "Error: provider configuration not accessible: %s: %v\n", settingsPath, err)
 		os.Exit(1)
 	}
 
@@ -140,25 +134,15 @@ func run(cmd *cobra.Command, args []string) {
 		fmt.Printf("Using MCP config: %s\n", mcpPath)
 	}
 
-	// Optional global env file (~/.claude-cli/.env). Variables already set in
-	// the shell are not overridden, so shell exports win over .env defaults.
 	if envPath, err := provider.EnvFile(); err == nil {
-		if _, err := os.Stat(envPath); err == nil {
-			n, lerr := provider.LoadEnv(envPath)
-			if lerr != nil {
-				// Fail rather than launch claude with a partially-applied env
-				// (e.g. ANTHROPIC_BASE_URL set but MODEL missing).
-				fmt.Fprintf(os.Stderr, "Error: invalid env file %s: %v\n", envPath, lerr)
-				os.Exit(1)
-			}
-			if n > 0 {
-				fmt.Printf("Using env: %s\n", envPath)
-			}
+		if n, lerr := provider.LoadEnv(envPath); lerr != nil {
+			fmt.Fprintf(os.Stderr, "Error: invalid env file %s: %v\n", envPath, lerr)
+			os.Exit(1)
+		} else if n > 0 {
+			fmt.Printf("Using env: %s\n", envPath)
 		}
 	}
 
-	// Replace this process with claude (Unix) or spawn it (Windows). See
-	// launch_*.go. Replacing the process keeps claude as the direct foreground
-	// process so terminal/mouse control is not disrupted by a parent wrapper.
+	// launch replaces this process (Unix) or spawns a child (Windows); see launch_*.go.
 	launch(claudeBin, finalArgs)
 }

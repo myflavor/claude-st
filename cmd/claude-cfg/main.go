@@ -43,13 +43,9 @@ func main() {
 func run(cmd *cobra.Command, args []string) {
 	name := args[0]
 
-	src, err := provider.File(name)
+	src, err := provider.Resolve(name)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "Error: %v\n", err)
-		os.Exit(1)
-	}
-	if _, err := os.Stat(src); err != nil {
-		fmt.Fprintf(os.Stderr, "Error: provider configuration not accessible: %s: %v\n", src, err)
 		os.Exit(1)
 	}
 
@@ -71,10 +67,7 @@ func run(cmd *cobra.Command, args []string) {
 		fmt.Fprintf(os.Stderr, "Error: failed to read %s: %v\n", src, err)
 		os.Exit(1)
 	}
-	// Write to a temp file in the same directory, then rename over dst.
-	// os.WriteFile truncates dst before writing; a partial write (ENOSPC,
-	// crash) would leave settings.json truncated with no backup. Rename is
-	// atomic on the same filesystem.
+	// Atomic write: stage in dst's directory, then rename over it.
 	tmp := dst + ".tmp"
 	if err := os.WriteFile(tmp, data, 0644); err != nil {
 		fmt.Fprintf(os.Stderr, "Error: failed to write %s: %v\n", tmp, err)

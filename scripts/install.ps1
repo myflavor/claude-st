@@ -47,10 +47,7 @@ try {
 
     tar -xzf $TmpTgz -C $ExtractDir
 
-    # Stage in the target directory then rename into place. A direct move
-    # from the temp dir can cross volumes and expose a half-written binary;
-    # staging in the target dir makes the final rename atomic on the same
-    # volume.
+    # Atomic install: stage in the target dir, then rename (same volume).
     $StStaged = Join-Path $ClaudeDir ".claude-st.exe.tmp"
     $CfgStaged = Join-Path $ClaudeDir ".claude-cfg.exe.tmp"
     Copy-Item -Force (Join-Path $ExtractDir "claude-st.exe") $StStaged

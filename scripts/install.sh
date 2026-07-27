@@ -72,10 +72,7 @@ fi
 tar -xzf "$TMP_DIR/$TGZ" -C "$TMP_DIR"
 chmod +x "$TMP_DIR/claude-st" "$TMP_DIR/claude-cfg"
 
-# Move into place atomically: stage in the target directory then rename.
-# A direct mv from $TMP_DIR can cross filesystems (e.g. /tmp -> /usr/local/bin)
-# and leave a half-written binary visible to other processes mid-copy; the
-# final rename is atomic on the same filesystem.
+# Atomic install: stage in the target dir, then rename (same filesystem).
 install_bin() {
     src="$1"; dst="$2"; tmp="$dst.new.$$"
     cp -f "$src" "$tmp" || { rm -f "$tmp"; echo "Error: failed to stage $dst"; exit 1; }

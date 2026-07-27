@@ -35,6 +35,19 @@ func File(name string) (string, error) {
 	return filepath.Join(dir, name+".json"), nil
 }
 
+// Resolve returns the provider config path, erroring if it is not accessible.
+// Combines File with an existence check so callers don't repeat the stat+error.
+func Resolve(name string) (string, error) {
+	path, err := File(name)
+	if err != nil {
+		return "", err
+	}
+	if _, err := os.Stat(path); err != nil {
+		return "", fmt.Errorf("provider configuration not accessible: %s: %w", path, err)
+	}
+	return path, nil
+}
+
 // MCPFile returns the path to the global MCP config (~/.claude-cli/.mcp.json).
 func MCPFile() (string, error) {
 	dir, err := Dir()

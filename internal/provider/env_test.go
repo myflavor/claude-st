@@ -65,8 +65,13 @@ func TestLoadEnvMissingEquals(t *testing.T) {
 }
 
 func TestLoadEnvMissingFile(t *testing.T) {
-	if _, err := LoadEnv(filepath.Join(t.TempDir(), "nope.env")); err == nil {
-		t.Fatal("expected error for missing file")
+	// The env file is optional: a missing file is not an error.
+	n, err := LoadEnv(filepath.Join(t.TempDir(), "nope.env"))
+	if err != nil {
+		t.Fatalf("missing .env should be optional, got error: %v", err)
+	}
+	if n != 0 {
+		t.Errorf("n=%d want 0 for missing file", n)
 	}
 }
 
