@@ -1,6 +1,5 @@
-# Build output (root-level artifacts only — not the cmd/claude-* source dirs)
+# Build output (root-level artifacts only — not cmd/claude-st)
 /claude-st
-/claude-cfg
 /dist/
 *.exe
 *.dll

@@ -1,4 +1,4 @@
-module claude-cli
+module claude-st
 
 go 1.26.3
 

@@ -1,15 +1,14 @@
 #!/bin/bash
-# Install claude-st and claude-cfg from GitHub Releases
-# Usage: curl -sSL https://raw.githubusercontent.com/myflavor/claude-cli/main/scripts/install.sh | bash
+# Install claude-st from GitHub Releases
+# Usage: curl -sSL https://raw.githubusercontent.com/myflavor/claude-st/main/scripts/install.sh | bash
 #
-# Downloads a single per-platform tarball (claude-cli-<os>-<arch>.tar.gz)
-# containing both binaries and extracts them next to claude. Uses only tar,
-# which is built in on Linux and macOS.
+# Downloads the per-platform binary (claude-st-<os>-<arch>) and places it
+# next to claude.
 set -e
 
-REPO="myflavor/claude-cli"
+REPO="myflavor/claude-st"
 
-# Detect OS and arch, map to the release tarball name
+# Detect OS and arch, map to the release binary name
 OS=$(uname -s | tr '[:upper:]' '[:lower:]')
 ARCH=$(uname -m)
 
@@ -19,21 +18,12 @@ case "$ARCH" in
     *) echo "Unsupported arch: $ARCH"; exit 1 ;;
 esac
 
-case "$OS-$ARCH" in
-    linux-amd64)   TGZ="claude-cli-linux-amd64.tar.gz" ;;
-    linux-arm64)   TGZ="claude-cli-linux-arm64.tar.gz" ;;
-    darwin-amd64)  TGZ="claude-cli-darwin-amd64.tar.gz" ;;
-    darwin-arm64)  TGZ="claude-cli-darwin-arm64.tar.gz" ;;
+case "$OS" in
+    linux|darwin) BIN="claude-st-$OS-$ARCH" ;;
     *) echo "Unsupported platform: $OS-$ARCH"; exit 1 ;;
 esac
 
-# tar is required to extract the archive (built in on Linux/macOS)
-if ! command -v tar >/dev/null 2>&1; then
-    echo "Error: 'tar' is required but not found (very unusual on Linux/macOS)."
-    exit 1
-fi
-
-# Find claude location (both binaries install next to it)
+# Find claude location (binary installs next to it)
 CLAUDE_PATH=$(command -v claude)
 if [ -z "$CLAUDE_PATH" ]; then
     echo "Error: claude command not found in PATH"
@@ -43,47 +33,35 @@ fi
 
 CLAUDE_DIR=$(cd "$(dirname "$CLAUDE_PATH")" && pwd)
 ST_TARGET="$CLAUDE_DIR/claude-st"
-CFG_TARGET="$CLAUDE_DIR/claude-cfg"
 
 # Check write permission on any existing binary (e.g. previously installed with sudo)
-check_writable() {
-    if [ -f "$1" ] && [ ! -w "$1" ]; then
-        echo "Error: no write permission to $1"
-        echo "Try running with sudo, or install claude to a user-writable location"
-        exit 1
-    fi
-}
-check_writable "$ST_TARGET"
-check_writable "$CFG_TARGET"
+if [ -f "$ST_TARGET" ] && [ ! -w "$ST_TARGET" ]; then
+    echo "Error: no write permission to $ST_TARGET"
+    echo "Try running with sudo, or install claude to a user-writable location"
+    exit 1
+fi
 
 TMP_DIR=$(mktemp -d)
 trap "rm -rf $TMP_DIR" EXIT
 
-echo "Downloading $TGZ from $REPO..."
-if ! curl -sSL -f -o "$TMP_DIR/$TGZ" "https://github.com/$REPO/releases/latest/download/$TGZ"; then
-    echo "Error: download failed for $TGZ"
+echo "Downloading $BIN from $REPO..."
+if ! curl -sSL -f -o "$TMP_DIR/claude-st" "https://github.com/$REPO/releases/latest/download/$BIN"; then
+    echo "Error: download failed for $BIN"
     exit 1
 fi
-if [ ! -s "$TMP_DIR/$TGZ" ]; then
-    echo "Error: downloaded file is empty: $TGZ"
+if [ ! -s "$TMP_DIR/claude-st" ]; then
+    echo "Error: downloaded file is empty: $BIN"
     exit 1
 fi
-
-tar -xzf "$TMP_DIR/$TGZ" -C "$TMP_DIR"
-chmod +x "$TMP_DIR/claude-st" "$TMP_DIR/claude-cfg"
+chmod +x "$TMP_DIR/claude-st"
 
 # Atomic install: stage in the target dir, then rename (same filesystem).
-install_bin() {
-    src="$1"; dst="$2"; tmp="$dst.new.$$"
-    cp -f "$src" "$tmp" || { rm -f "$tmp"; echo "Error: failed to stage $dst"; exit 1; }
-    mv -f "$tmp" "$dst" || { rm -f "$tmp"; echo "Error: failed to install $dst"; exit 1; }
-}
-install_bin "$TMP_DIR/claude-st"  "$ST_TARGET"
-install_bin "$TMP_DIR/claude-cfg" "$CFG_TARGET"
+tmp="$ST_TARGET.new.$$"
+cp -f "$TMP_DIR/claude-st" "$tmp" || { rm -f "$tmp"; echo "Error: failed to stage $ST_TARGET"; exit 1; }
+mv -f "$tmp" "$ST_TARGET" || { rm -f "$tmp"; echo "Error: failed to install $ST_TARGET"; exit 1; }
 
-# Set up ~/.claude-cli/ directory
 HOME_DIR="${HOME:-$(eval echo ~$(id -un))}"
-PROVIDERS_DIR="$HOME_DIR/.claude-cli"
+PROVIDERS_DIR="$HOME_DIR/.claude-st"
 
 if [ ! -d "$PROVIDERS_DIR" ]; then
     mkdir -p "$PROVIDERS_DIR"
@@ -94,5 +72,4 @@ fi
 
 echo ""
 echo "Installed to: $ST_TARGET"
-echo "              $CFG_TARGET"
 echo "Test it with: claude-st <provider-name>"

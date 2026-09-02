@@ -1,8 +1,4 @@
-// Package provider resolves provider configuration paths.
-//
-// Providers are stored as single JSON files under ~/.claude-cli/<name>.json.
-// A shared MCP config may live at ~/.claude-cli/.mcp.json and is injected for
-// every provider start.
+// Package provider resolves provider configuration paths under ~/.claude-st.
 package provider
 
 import (
@@ -11,13 +7,10 @@ import (
 	"path/filepath"
 )
 
-// configDirName is the directory holding provider files.
-const configDirName = ".claude-cli"
-
-// mcpFileName is the global MCP config shared by all providers.
+const configDirName = ".claude-st"
 const mcpFileName = ".mcp.json"
 
-// Dir returns the provider config directory (~/.claude-cli).
+// Dir returns the provider config directory.
 func Dir() (string, error) {
 	home, err := os.UserHomeDir()
 	if err != nil {
@@ -26,7 +19,7 @@ func Dir() (string, error) {
 	return filepath.Join(home, configDirName), nil
 }
 
-// File returns the path to a provider's settings file (~/.claude-cli/<name>.json).
+// File returns the path to a provider's settings file.
 func File(name string) (string, error) {
 	dir, err := Dir()
 	if err != nil {
@@ -48,7 +41,7 @@ func Resolve(name string) (string, error) {
 	return path, nil
 }
 
-// MCPFile returns the path to the global MCP config (~/.claude-cli/.mcp.json).
+// MCPFile returns the path to the global MCP config.
 func MCPFile() (string, error) {
 	dir, err := Dir()
 	if err != nil {

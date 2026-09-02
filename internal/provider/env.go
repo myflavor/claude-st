@@ -8,7 +8,7 @@ import (
 	"strings"
 )
 
-// EnvFile returns the path to the global env file (~/.claude-cli/.env).
+// EnvFile returns the path to the global env file.
 func EnvFile() (string, error) {
 	dir, err := Dir()
 	if err != nil {
@@ -19,19 +19,20 @@ func EnvFile() (string, error) {
 
 // LoadEnv parses a dotenv file and exports each KEY=VALUE into the process
 // environment. Variables already set in the environment are not overridden
-// (shell exports win). The env file is optional: if it cannot be opened for
-// any reason (missing, permission denied, stale NFS handle, etc.) LoadEnv
-// returns (0, nil) without error. The file is parsed fully before applying
-// anything, so a parse error leaves the environment untouched.
+// (shell exports win). The env file is optional: any failure to open it is
+// non-fatal. The file is parsed fully before applying anything, so a parse
+// error leaves the environment untouched.
 func LoadEnv(path string) (int, error) {
 	f, err := os.Open(path)
 	if err != nil {
-		// The env file is optional; any failure to open it is non-fatal.
 		return 0, nil
 	}
 	defer f.Close()
 
-	type entry struct{ key, val string; line int }
+	type entry struct {
+		key, val string
+		line     int
+	}
 	var entries []entry
 	sc := bufio.NewScanner(f)
 	ln := 0

@@ -1,15 +1,4 @@
-// claude-st starts Claude Code with a provider configuration.
-//
-// Usage:
-//
-//	claude-st <provider> [claude args...]
-//	claude-st <provider> -S [claude args...]
-//
-// <provider> is required and selects ~/.claude-cli/<provider>.json, which is
-// passed to claude via --settings. If ~/.claude-cli/.mcp.json exists, it is
-// injected via --mcp-config for every provider. -S adds
-// --dangerously-skip-permissions. All other arguments are passed through to
-// claude unchanged.
+// claude-st starts Claude Code with a provider configuration from ~/.claude-st.
 package main
 
 import (
@@ -18,7 +7,7 @@ import (
 	"os/exec"
 	"strings"
 
-	"claude-cli/internal/provider"
+	"claude-st/internal/provider"
 
 	"github.com/spf13/cobra"
 )
@@ -28,15 +17,15 @@ var rootCmd = &cobra.Command{
 	Short: "Start Claude CLI with a provider configuration",
 	Long: `Start Claude CLI with a provider configuration.
 
-<provider> is required and selects ~/.claude-cli/<provider>.json, which is
+<provider> is required and selects ~/.claude-st/<provider>.json, which is
 passed to claude via --settings. Multiple providers can run side by side in
 different terminals without overwriting ~/.claude/settings.json.
 
-If ~/.claude-cli/.mcp.json exists, it is automatically passed as --mcp-config
+If ~/.claude-st/.mcp.json exists, it is automatically passed as --mcp-config
 so every provider gets the same global MCP servers (session-scoped; does not
 write project .mcp.json).
 
-If ~/.claude-cli/.env exists, each KEY=VALUE is exported into the environment
+If ~/.claude-st/.env exists, each KEY=VALUE is exported into the environment
 before launching claude. Variables already set in the shell are not overridden,
 so common settings like CLAUDE_CODE_NO_FLICKER=1 apply to every provider
 without repeating them in each settings file.
