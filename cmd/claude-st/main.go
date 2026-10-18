@@ -126,12 +126,12 @@ func run(cmd *cobra.Command, args []string) {
 		os.Exit(1)
 	}
 
-	fmt.Printf("Using provider: %s\n", providerName)
+	fmt.Printf("Using settings: %s\n", settingsPath)
 	if mcpPath != "" {
-		fmt.Printf("Using MCP config: %s\n", mcpPath)
+		fmt.Printf("Using mcp: %s\n", mcpPath)
 	}
 	if agentsMdPath != "" {
-		fmt.Printf("Using instructions: %s\n", agentsMdPath)
+		fmt.Printf("Using prompt: %s\n", agentsMdPath)
 	}
 
 	if envPath, err := provider.EnvFile(); err == nil {
