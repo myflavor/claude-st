@@ -49,7 +49,8 @@ claude-st <provider> [claude 参数...]
 1. 读取 `~/.claude-st/<provider>.json`
 2. 若存在 `~/.claude-st/.mcp.json`，通过 `--mcp-config` 注入（所有 provider 共用）
 3. 若存在 `~/.claude-st/.env`，把其中 `KEY=VALUE` 导入环境（shell 已设的不覆盖）
-4. 通过 `claude --settings <provider.json>` 启动
+4. 若存在 `~/.claude-st/AGENTS.md`，通过 `--append-system-prompt-file` 追加到系统提示（所有 provider 共用）
+5. 通过 `claude --settings <provider.json>` 启动
 
 这样可以：
 - ✅ 完全覆盖 `~/.claude/settings.json` 的配置
@@ -57,6 +58,7 @@ claude-st <provider> [claude 参数...]
 - ✅ 多个 provider 可以共存
 - ✅ 多个终端可以同时运行不同 provider
 - ✅ 全局 MCP 对每个 provider 生效，且不写项目 `.mcp.json`
+- ✅ 全局指令对每个 provider 生效，且不写项目 `AGENTS.md` / `CLAUDE.md`
 
 ### 示例
 
@@ -92,6 +94,20 @@ CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC=1   # 禁遥测
 ```
 
 > 适合放"每个 provider 都想要、但不想在每个 settings.json 里重复"的通用变量。provider 自己的 `env`（在 `<provider>.json` 里）仍会生效，可覆盖这里设的值。
+
+### 全局指令文件（~/.claude-st/AGENTS.md）
+
+若存在 `~/.claude-st/AGENTS.md`，启动时通过 `--append-system-prompt-file` 追加到 claude 的默认系统提示（所有 provider 共用）。内容不写进项目 `AGENTS.md` / `CLAUDE.md`，也不写进 `~/.claude/CLAUDE.md`，只对 claude-st 启动的会话生效。
+
+```markdown
+<!-- ~/.claude-st/AGENTS.md -->
+- 回复用中文
+- 改完代码先跑 gofmt 和 go test
+```
+
+注意事项：
+- 它走的是系统提示，不是 memory 体系：不会出现在 `/context` 的 Memory files 里，也不支持 `@path` 导入。
+- claude 同一时间只接受一个文件；你自己再传 `--append-system-prompt` 或 `--append-system-prompt-file` 时，claude-st 会跳过这份全局文件，以你的参数为准。
 
 ### Provider 配置示例
 
@@ -131,6 +147,7 @@ CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC=1   # 禁遥测
 ~/.claude-st/
 ├── .mcp.json         # 可选，全局 MCP（所有 provider 自动注入）
 ├── .env              # 可选，全局环境变量
+├── AGENTS.md         # 可选，全局指令（所有 provider 自动追加到系统提示）
 ├── claude.json
 ├── deepseek.json
 └── ...

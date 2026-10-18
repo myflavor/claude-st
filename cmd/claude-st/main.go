@@ -30,6 +30,10 @@ before launching claude. Variables already set in the shell are not overridden,
 so common settings like CLAUDE_CODE_NO_FLICKER=1 apply to every provider
 without repeating them in each settings file.
 
+If ~/.claude-st/AGENTS.md exists, it is passed via --append-system-prompt-file
+so its instructions reach every provider session without being written into a
+project file.
+
 Short flags (parsed by claude-st):
   -S    Skip permissions (adds --dangerously-skip-permissions)
   -H    Show help
@@ -93,18 +97,22 @@ func run(cmd *cobra.Command, args []string) {
 	}
 
 	// Optional global MCP shared by all providers.
-	var mcpPath string
-	if p, err := provider.MCPFile(); err == nil {
-		if _, err := os.Stat(p); err == nil {
-			mcpPath = p
-		}
+	mcpPath := existingFile(provider.MCPFile())
+
+	// claude rejects two appended prompts; the user's flags win.
+	var agentsMdPath string
+	if !hasFlag(claudeArgs, "--append-system-prompt") &&
+		!hasFlag(claudeArgs, "--append-system-prompt-file") {
+		agentsMdPath = existingFile(provider.AgentsMdFile())
 	}
 
-	// Build the claude argument list: --settings, optional --mcp-config, optional -S, then passthrough.
-	finalArgs := make([]string, 0, len(claudeArgs)+5)
+	finalArgs := make([]string, 0, len(claudeArgs)+7)
 	finalArgs = append(finalArgs, "--settings", settingsPath)
 	if mcpPath != "" {
 		finalArgs = append(finalArgs, "--mcp-config", mcpPath)
+	}
+	if agentsMdPath != "" {
+		finalArgs = append(finalArgs, "--append-system-prompt-file", agentsMdPath)
 	}
 	if skipPermissions {
 		finalArgs = append(finalArgs, "--dangerously-skip-permissions")
@@ -122,6 +130,9 @@ func run(cmd *cobra.Command, args []string) {
 	if mcpPath != "" {
 		fmt.Printf("Using MCP config: %s\n", mcpPath)
 	}
+	if agentsMdPath != "" {
+		fmt.Printf("Using instructions: %s\n", agentsMdPath)
+	}
 
 	if envPath, err := provider.EnvFile(); err == nil {
 		if n, lerr := provider.LoadEnv(envPath); lerr != nil {
@@ -134,4 +145,23 @@ func run(cmd *cobra.Command, args []string) {
 
 	// launch replaces this process (Unix) or spawns a child (Windows); see launch_*.go.
 	launch(claudeBin, finalArgs)
+}
+
+func hasFlag(args []string, flag string) bool {
+	for _, arg := range args {
+		if arg == flag || strings.HasPrefix(arg, flag+"=") {
+			return true
+		}
+	}
+	return false
+}
+
+func existingFile(path string, err error) string {
+	if err != nil {
+		return ""
+	}
+	if _, err := os.Stat(path); err != nil {
+		return ""
+	}
+	return path
 }

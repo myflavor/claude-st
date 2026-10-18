@@ -9,6 +9,7 @@ import (
 
 const configDirName = ".claude-st"
 const mcpFileName = ".mcp.json"
+const agentsMdFileName = "AGENTS.md"
 
 // Dir returns the provider config directory.
 func Dir() (string, error) {
@@ -21,15 +22,10 @@ func Dir() (string, error) {
 
 // File returns the path to a provider's settings file.
 func File(name string) (string, error) {
-	dir, err := Dir()
-	if err != nil {
-		return "", err
-	}
-	return filepath.Join(dir, name+".json"), nil
+	return fileInDir(name + ".json")
 }
 
 // Resolve returns the provider config path, erroring if it is not accessible.
-// Combines File with an existence check so callers don't repeat the stat+error.
 func Resolve(name string) (string, error) {
 	path, err := File(name)
 	if err != nil {
@@ -43,9 +39,18 @@ func Resolve(name string) (string, error) {
 
 // MCPFile returns the path to the global MCP config.
 func MCPFile() (string, error) {
+	return fileInDir(mcpFileName)
+}
+
+// AgentsMdFile returns the path to the global instructions file.
+func AgentsMdFile() (string, error) {
+	return fileInDir(agentsMdFileName)
+}
+
+func fileInDir(name string) (string, error) {
 	dir, err := Dir()
 	if err != nil {
 		return "", err
 	}
-	return filepath.Join(dir, mcpFileName), nil
+	return filepath.Join(dir, name), nil
 }

@@ -4,17 +4,12 @@ import (
 	"bufio"
 	"fmt"
 	"os"
-	"path/filepath"
 	"strings"
 )
 
 // EnvFile returns the path to the global env file.
 func EnvFile() (string, error) {
-	dir, err := Dir()
-	if err != nil {
-		return "", err
-	}
-	return filepath.Join(dir, ".env"), nil
+	return fileInDir(".env")
 }
 
 // LoadEnv parses a dotenv file and exports each KEY=VALUE into the process
